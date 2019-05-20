@@ -1,0 +1,3 @@
+numba>=0.43.1
+arcade>=2.0.9
+SharedArray>=3.1.0
