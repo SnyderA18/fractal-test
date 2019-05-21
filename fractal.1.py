@@ -13,9 +13,13 @@ SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
 SCREEN_TITLE = "Starting Template"
 
-from numba import jit
+# HASNUMBA = False
+# try:
+#     from numba import jit
+#     HASNUMBA = True
+# except ImportError:
+#     pass
 
-#@jit
 def draw_julia(c, result_queue, command_queue, origin = (0,0), zoom = 1, maxIter = 128, width = SCREEN_WIDTH, height = SCREEN_HEIGHT):
     originX = origin[0]
     originY = origin[1]
@@ -31,7 +35,10 @@ def draw_julia(c, result_queue, command_queue, origin = (0,0), zoom = 1, maxIter
                 z = z * z + c
                 i -= 1
                 #print(z)
-            color = (i << 21) + (i << 10) + i*8
+            if i <= 1:
+                color = 0
+            else:
+                color = (i << 21) + (i << 10) + i*8
             calc = (x, y, color)
             calc2 = (width - x - 1, height - y - 1, color)
             if result_queue.full():
@@ -63,14 +70,14 @@ def mandel_core(c, maxIter):
             break
     return i
 
-@jit
-def mandel_jit(c, maxIter):
-    z=0+0j
-    for i in range(maxIter):
-        z = z*z + c
-        if z.real * z.real + z.imag * z.imag > 4:
-            break
-    return i
+# @jit
+# def mandel_jit(c, maxIter):
+#     z=0+0j
+#     for i in range(maxIter):
+#         z = z*z + c
+#         if z.real * z.real + z.imag * z.imag > 4:
+#             break
+#     return i
 
 def draw_mandlebrot(c, result_queue, command_queue, origin = (0,0), zoom = 1, maxIter = 128, width = SCREEN_WIDTH, height = SCREEN_HEIGHT):
     originX = origin[0]
@@ -90,7 +97,10 @@ def draw_mandlebrot(c, result_queue, command_queue, origin = (0,0), zoom = 1, ma
             c = complex(cx, cy)
             z = 0+0j
             i = mandel_core(c, maxIter)
-            color = (i << 21) + (i << 10) + i*8
+            if i >= 254:
+                color = 0
+            else:
+                color = (i << 21) + (i << 10) + i*8
             calc = (x, y, color)
             calc2 = (width - x - 1, height - y - 1, color)
             if result_queue.full():
@@ -245,39 +255,5 @@ def benchmark_mandel(core, c):
     #         i = mandel_core(c, maxIter)
 
 if __name__ == "__main__":
-    #main()
-    import timeit
-    number = 1000 * 1000
-
-    units = {"nsec": 1e-9, "usec": 1e-6, "msec": 1e-3, "sec": 1.0}
-    precision = 3
-    time_unit = None
-    def format_time(dt):
-        unit = time_unit
-
-        if unit is not None:
-            scale = units[unit]
-        else:
-            scales = [(scale, unit) for unit, scale in units.items()]
-            scales.sort(reverse=True)
-            for scale, unit in scales:
-                if dt >= scale:
-                    break
-        return "%.*g %s" % (precision, dt / scale, unit)
-
-    cx = random.random() * 3 - 2
-    cy = random.random() * 3 - 1.5
-    c = complex(cx, cy)
-
-    print("Running standard test:")
-    bare_time = timeit.timeit("benchmark_mandel(mandel_core,c)", globals=globals(), number = number)
-    print("\tExecution took %f" % bare_time)
-    avg_time = float(bare_time / number)
-    print("\tAverage execution took", format_time(avg_time))
-    
-    print("Running JIT test:")
-    bare_time = timeit.timeit("benchmark_mandel(mandel_jit,c)", globals=globals(), number = number)
-    print("\tExecution took %f" % bare_time)
-    avg_time = float(bare_time / number)
-    print("\tAverage execution took", format_time(avg_time))
+    main()
     

@@ -82,7 +82,7 @@ class MyGame(arcade.Window):
         # Number of lines to draw per update cycle
         lines = 20
         if self.y >= SCREEN_HEIGHT:
-            self.on_close()
+            # self.on_close()
             return
         for _ in range(lines):
             cy = self.y * (self.ymax - self.ymin) / (SCREEN_HEIGHT - 1) + self.ymin
