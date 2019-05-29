@@ -72,11 +72,20 @@ class MyGame(arcade.Window):
         self.ymin = -1.5
         self.ymax = 1.5
 
-
     def on_draw(self):
         arcade.start_render()
         self.background_sprite.draw()
         
+    def _point_to_screen(self, cx, cy):
+        x = ((cx - self.xmin) * (SCREEN_WIDTH - 1)) / (self.xmax - self.xmin)
+        y = ((cy - self.ymin) * (SCREEN_HEIGHT - 1)) / (self.ymax - self.ymin)
+        return x, SCREEN_HEIGHT - y
+
+    def _screen_to_point(self, x, y):
+        cy = (SCREEN_HEIGHT - y) * (self.ymax - self.ymin) / (SCREEN_HEIGHT - 1) + self.ymin
+        cx = x * (self.xmax - self.xmin) / (SCREEN_WIDTH - 1) + self.xmin
+        return cx, cy
+
     @jit
     def update(self, delta_time):
         # Number of lines to draw per update cycle
@@ -116,7 +125,16 @@ class MyGame(arcade.Window):
         For a full list of keys, see:
         http://arcade.academy/arcade.key.html
         """
-        pass
+        if key == arcade.key.PLUS:
+            self.maxIter = int(self.maxIter * 1.1)
+            self._clear_image()
+            self.y = 0
+            print("New iterations:", self.maxIter)
+        elif key == arcade.key.MINUS:
+            self.maxIter = max(255, int(self.maxIter * 0.9))
+            self._clear_image()
+            self.y = 0
+            print("New iterations:", self.maxIter)
 
     def on_key_release(self, key, key_modifiers):
         """
@@ -140,7 +158,34 @@ class MyGame(arcade.Window):
         """
         Called when a user releases a mouse button.
         """
-        pass
+        print("before: (%0.4f,%0.4f)-(%0.4f,%0.4f)" % (self.xmin,self.ymin,self.xmax,self.ymax))
+        # Zoom out if the shift key is pressed, in otherwise
+        if key_modifiers & arcade.key.MOD_SHIFT == 1:
+            # zooming out
+            cur_width = self.xmax - self.xmin
+            cur_height = self.ymax - self.ymin
+            cx, cy = self._screen_to_point(x,y)
+            self.xmin = cx - cur_width
+            self.xmax = cx + cur_width
+            self.ymin = cy - cur_height
+            self.ymax = cy + cur_height
+            self.y = 0
+            self._clear_image()
+        else:
+            cur_width = self.xmax - self.xmin
+            cur_height = self.ymax - self.ymin
+            cx, cy = self._screen_to_point(x,y)
+            self.xmin = cx - cur_width / 4
+            self.xmax = cx + cur_width / 4
+            self.ymin = cy - cur_height / 4
+            self.ymax = cy + cur_height / 4
+            self.y = 0
+            self._clear_image()
+        print("after: (%0.4f,%0.4f)-(%0.4f,%0.4f)" % (self.xmin,self.ymin,self.xmax,self.ymax))
+
+    def _clear_image(self, color = arcade.color.AMAZON):
+        self.off_screen_image.paste(color, (0,0,self.off_screen_image.size[0], self.off_screen_image.size[1]))
+
 
 
 def main():
