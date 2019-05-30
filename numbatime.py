@@ -1,5 +1,7 @@
 from numba import jit
 import timeit
+import pyximport; pyximport.install()
+import cython_core
 
 number = 2048 * 2048
 
@@ -25,8 +27,8 @@ def mandel_core_float32(creal, cimag, maxIter):
     zimag = 0
     #for i in range(maxIter):
     for i in range(maxIter):
-        zreal_2 = zreal**2
-        zimag_2 = zimag**2
+        zreal_2 = zreal * zreal
+        zimag_2 = zimag * zimag
         if zreal_2 + zimag_2 > 4:
             break
         zimag = 2 * zreal * zimag + cimag
@@ -40,8 +42,8 @@ def mandel_core_float64(creal, cimag, maxIter):
     zreal = 0
     zimag = 0
     for i in range(maxIter):
-        zreal_2 = zreal**2
-        zimag_2 = zimag**2
+        zreal_2 = zreal * zreal
+        zimag_2 = zimag * zimag
         if zreal_2 + zimag_2 > 4:
             break
         zimag = 2 * zreal * zimag + cimag
@@ -81,6 +83,30 @@ if __name__ == "__main__":
 
     print("Timing float64 funciton")
     bare_time = timeit.timeit("mandel_core_float64(creal, cimag, iter)", globals=globals(), number = number)
+    print("\tExecution took %f" % bare_time)
+    avg_time = float(bare_time / number)
+    print("\tAverage execution took", format_time(avg_time))
+
+    print("Timing Cython float Core with complex unpacking funciton")
+    bare_time = timeit.timeit("cython_core.mandel_core_complex_float(c, iter)", globals=globals(), number = number)
+    print("\tExecution took %f" % bare_time)
+    avg_time = float(bare_time / number)
+    print("\tAverage execution took", format_time(avg_time))
+
+    print("Timing Cython double Core with complex unpacking funciton")
+    bare_time = timeit.timeit("cython_core.mandel_core_complex_double(c, iter)", globals=globals(), number = number)
+    print("\tExecution took %f" % bare_time)
+    avg_time = float(bare_time / number)
+    print("\tAverage execution took", format_time(avg_time))
+
+    print("Timing Cython Core with pure float funciton")
+    bare_time = timeit.timeit("cython_core.mandel_core_float(creal, cimag, iter)", globals=globals(), number = number)
+    print("\tExecution took %f" % bare_time)
+    avg_time = float(bare_time / number)
+    print("\tAverage execution took", format_time(avg_time))
+
+    print("Timing Cython Core with pure double funciton")
+    bare_time = timeit.timeit("cython_core.mandel_core_double(creal, cimag, iter)", globals=globals(), number = number)
     print("\tExecution took %f" % bare_time)
     avg_time = float(bare_time / number)
     print("\tAverage execution took", format_time(avg_time))
