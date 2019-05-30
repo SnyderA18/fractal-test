@@ -3,7 +3,10 @@ import PIL
 import PIL.Image
 import random
 import numpy as np
-
+import threading
+import multiprocessing
+import time
+from queue import Queue
 
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
@@ -24,8 +27,6 @@ try:
 except ImportError:
     pass
 
-
-
 def _mandel_core(c, maxIter):
     z=0+0j
     for i in range(maxIter):
@@ -33,7 +34,6 @@ def _mandel_core(c, maxIter):
         if z.real * z.real + z.imag * z.imag > 4:
             break
     return i
-
 
 mandle_core = _mandel_core
 if HASPYXIMPORT:
@@ -45,6 +45,55 @@ elif HASNUMBA:
     # mandle_core = dispatcher(_mandel_core, nopython=True)
     mandle_core.compile('uint(complex64,uint8)')
     
+
+# def _draw_fractal(xmin, xmax, ymin, ymax, maxIter, xoffset, yoffset, width, height, buffer):
+#     starttime = time.time()
+#     ystep = (ymax - ymin) / (height - 1)
+#     xstep = (xmax - xmin) / (width - 1)
+#     for y in range(yoffset, yoffset + height):
+#         cy = (y - yoffset) * ystep + ymin
+#         for x in range(xoffset, xoffset + width):
+#             cx = (x - xoffset) * xstep + xmin
+#             # print("x,y =",(x,y), "cx,cy = (%0.4f,%0.4f)" % (cx,cy))
+#             c = complex(cx, cy)
+#             z = 0+0j
+#             i = mandle_core(c, maxIter)
+#             if i >= maxIter - 1:
+#                 buffer[y,x] = 0
+#             else:
+#                 color = (i << 21) + (i << 10) + i*8
+#                 buffer[y,x] = color
+#     print("Calculation took %.2f seconds" % (time.time() - starttime))
+
+def _draw_fractal_queue(command_queue, buffer):
+    while True:
+        message = command_queue.get()
+        if message == "quit":
+            return
+
+        xmin, xmax, ymin, ymax, maxIter, xoffset, yoffset, width, height = message
+        starttime = time.time()
+
+        ystep = (ymax - ymin) / (height - 1)
+        xstep = (xmax - xmin) / (width - 1)
+        for y in range(yoffset, yoffset + height):
+            cy = (y - yoffset) * ystep + ymin
+            for x in range(xoffset, xoffset + width):
+                cx = (x - xoffset) * xstep + xmin
+                c = complex(cx, cy)
+                z = 0+0j
+                i = mandle_core(c, maxIter)
+                if i >= maxIter - 1:
+                    buffer[y,x] = 0
+                else:
+                    color = (i << 21) + (i << 10) + i*8
+                    buffer[y,x] = color
+        print("Calculation took %.2f seconds" % (time.time() - starttime))
+
+draw_fractal = _draw_fractal_queue
+if HASPYXIMPORT:
+    draw_fractal = cython_core._draw_fractal_queue_double
+    print("Using Cython draw_fractal")
 
 class MyGame(arcade.Window):
     """
@@ -72,7 +121,8 @@ class MyGame(arcade.Window):
         self.y = 0
         self.color = 0
         # Create your sprites and sprite lists here
-        self.data = np.empty((SCREEN_WIDTH,SCREEN_HEIGHT),dtype=np.int16)
+        #self.data = np.ascontiguousarray(np.empty((SCREEN_HEIGHT,SCREEN_WIDTH,3),dtype=np.uint8), dtype=np.uint8)
+        self.data = np.empty((SCREEN_HEIGHT,SCREEN_WIDTH),dtype=np.uint32)
         
         self.texture = arcade.Texture('background')
         self.background_sprite = arcade.Sprite()
@@ -85,6 +135,27 @@ class MyGame(arcade.Window):
         self.xmax = 1.0
         self.ymin = -1.5
         self.ymax = 1.5
+        self.threads = []
+        self.command_queue = Queue()
+        self.divs = 16
+        for i in range(multiprocessing.cpu_count()):
+            t = threading.Thread(target=draw_fractal, args=(self.command_queue, self.data), daemon=True)
+            t.start()
+            self.threads.append(t)
+        self.divide_drawing()
+
+    def divide_drawing(self):
+        div_per_axis = self.divs // 2
+        div_width = SCREEN_WIDTH // div_per_axis
+        div_height = SCREEN_HEIGHT // div_per_axis
+        for y in range(div_per_axis):
+            for x in range(div_per_axis):
+                xmin = x * ((self.xmax - self.xmin) / div_per_axis) + self.xmin
+                xmax = xmin + (self.xmax - self.xmin) / div_per_axis
+                ymin = y * ((self.ymax - self.ymin) / div_per_axis) + self.ymin
+                ymax = ymin + (self.ymax - self.ymin) / div_per_axis
+                args=(xmin, xmax, ymin, ymax, self.maxIter, div_width * x, div_height * y, div_width, div_height)
+                self.command_queue.put(args)
 
     def on_draw(self):
         arcade.start_render()
@@ -100,29 +171,8 @@ class MyGame(arcade.Window):
         cx = x * (self.xmax - self.xmin) / (SCREEN_WIDTH - 1) + self.xmin
         return cx, cy
 
-    @jit
     def update(self, delta_time):
-        # Number of lines to draw per update cycle
-        lines = 20
-        if self.y >= SCREEN_HEIGHT:
-            # self.on_close()
-            return
-        for _ in range(lines):
-            cy = self.y * (self.ymax - self.ymin) / (SCREEN_HEIGHT - 1) + self.ymin
-            for x in range(SCREEN_WIDTH):
-                cx = x * (self.xmax - self.xmin) / (SCREEN_WIDTH - 1) + self.xmin
-                c = complex(cx, cy)
-                z = 0+0j
-                i = mandle_core(c, self.maxIter)
-                if i >= self.maxIter - 1:
-                    color = 0
-                else:
-                    color = (i << 21) + (i << 10) + i*8
-                self.bitmap[x, self.y] = color
-            self.y += 1
-
-        # Convert the image to a texture
-        self.texture = arcade.Texture('background', self.off_screen_image)
+        self.texture = arcade.Texture('background', PIL.Image.fromarray(self.data, mode='RGBX'))
         # Set the texture of the background sprite
         self.background_sprite.texture = self.texture
 
@@ -198,7 +248,9 @@ class MyGame(arcade.Window):
         print("after: (%0.4f,%0.4f)-(%0.4f,%0.4f)" % (self.xmin,self.ymin,self.xmax,self.ymax))
 
     def _clear_image(self, color = arcade.color.AMAZON):
-        self.off_screen_image.paste(color, (0,0,self.off_screen_image.size[0], self.off_screen_image.size[1]))
+        #self.data = 
+        self.divide_drawing()
+        #self.off_screen_image.paste(color, (0,0,self.off_screen_image.size[0], self.off_screen_image.size[1]))
 
 
 
