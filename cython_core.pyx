@@ -120,7 +120,7 @@ def _draw_fractal_queue_double(command_queue, unsigned int[:,:] buffer):
         xmin, xmax, ymin, ymax, maxIter, xoffset, yoffset, width, height = message
         ystep = (ymax - ymin) / (height - 1)
         xstep = (xmax - xmin) / (width - 1)
-        starttime = time.time()
+        # starttime = time.time()
 
         ystep = (ymax - ymin) / (height - 1)
         xstep = (xmax - xmin) / (width - 1)
@@ -132,6 +132,6 @@ def _draw_fractal_queue_double(command_queue, unsigned int[:,:] buffer):
                 if i >= maxIter - 1:
                     buffer[y][x] = 0
                 else:
-                    color = ((i << 21) + (i << 10) + i<<3) & 0xffffff
+                    color = ((i << 21) + (i << 10) + i*8)
                     buffer[y][x] = color
-        print("Calculation took", format_time(time.time() - starttime))
+        # print("Calculation took", format_time(time.time() - starttime))
