@@ -22,7 +22,7 @@ except ImportError:
 HASPYXIMPORT=False
 
 try:
-    import pyximport; pyximport.install()
+    import pyximport; pyximport.install(language_level=3)
     HASPYXIMPORT=True
 except ImportError:
     pass
@@ -42,9 +42,7 @@ if HASPYXIMPORT:
     print("Using Cython core")
 elif HASNUMBA:
     mandle_core = jit(_mandel_core,nopython=True)
-    # mandle_core = dispatcher(_mandel_core, nopython=True)
     mandle_core.compile('uint(complex64,uint8)')
-    
 
 # def _draw_fractal(xmin, xmax, ymin, ymax, maxIter, xoffset, yoffset, width, height, buffer):
 #     starttime = time.time()
@@ -105,7 +103,7 @@ class MyGame(arcade.Window):
     """
 
     def __init__(self, width, height, title):
-        super().__init__(width, height, title)
+        super().__init__(width, height, title, antialiasing=False)
 
         # If you have sprite lists, you should create them here,
         # and set them to None
@@ -138,7 +136,9 @@ class MyGame(arcade.Window):
         self.threads = []
         self.command_queue = Queue()
         self.divs = 16
-        for i in range(multiprocessing.cpu_count()):
+        threads = multiprocessing.cpu_count()
+        threads = 1
+        for i in range(threads):
             t = threading.Thread(target=draw_fractal, args=(self.command_queue, self.data), daemon=True)
             t.start()
             self.threads.append(t)

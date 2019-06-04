@@ -55,7 +55,7 @@ class MyGame(arcade.Window):
     """
 
     def __init__(self, width, height, title):
-        super().__init__(width, height, title)
+        super().__init__(width, height, title, antialiasing=False)
 
         arcade.set_background_color(arcade.color.AMAZON)
         self.origin = (0.0, 0.0)

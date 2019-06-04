@@ -1,5 +1,6 @@
-import time
-cdef unsigned int _mandel_core_float(float creal, float cimag, unsigned int maxIter) nogil:
+# cython: language_level=3, boundscheck=False, cdivision=True
+
+cdef inline unsigned int _mandel_core_float(float creal, float cimag, unsigned int maxIter) nogil:
     cdef float zreal = 0.0
     cdef float zimag = 0.0
     cdef unsigned int i
@@ -15,7 +16,7 @@ cdef unsigned int _mandel_core_float(float creal, float cimag, unsigned int maxI
         zreal = zreal_2 - zimag_2 + creal 
     return i
 
-cdef unsigned int _mandel_core_double(double creal, double cimag, unsigned int maxIter) nogil:
+cdef inline unsigned int _mandel_core_double(double creal, double cimag, unsigned int maxIter) nogil:
     cdef double zreal = 0.0
     cdef double zimag = 0.0
     cdef unsigned int i
@@ -72,7 +73,7 @@ def draw_fractal_double(double xmin, double xmax, double ymin, double ymax,
     cdef double cx, cy
     cdef unsigned int i
 
-    starttime = time.time()
+    # starttime = time.time()
 
     for y in range(yoffset, yoffset + height):
         cy = (y - yoffset) * ystep + ymin
@@ -85,7 +86,7 @@ def draw_fractal_double(double xmin, double xmax, double ymin, double ymax,
             else:
                 color = (i << 21) + (i << 10) + i*8
                 buffer[y,x] = color
-    print("Calculation took %.2f seconds" % (time.time() - starttime))
+    # print("Calculation took %.2f seconds" % (time.time() - starttime))
 
 units = {"nsec": 1e-9, "usec": 1e-6, "msec": 1e-3, "sec": 1.0}
 precision = 3
