@@ -127,6 +127,7 @@ class MyGame(arcade.Window):
         self.zoom_box = None
         self.mouse_down = False
         self.box_color = arcade.color.WHITE
+        self.location = (0,0)
 
     def divide_drawing(self):
         div_per_axis = self.divs // 2
@@ -153,6 +154,9 @@ class MyGame(arcade.Window):
                 self.box_color = arcade.color.BLACK
             else:
                 self.box_color = arcade.color.WHITE
+        arcade.draw_rectangle_filled(SCREEN_WIDTH //2, 10, SCREEN_WIDTH, 20, arcade.color.AMAZON)
+        x,y = self._screen_to_point(*self.location)
+        arcade.draw_text("%0.4f, %0.4f" % (x,y),50, 5, arcade.color.BLACK)
 
         
     def _point_to_screen(self, cx, cy):
@@ -204,6 +208,7 @@ class MyGame(arcade.Window):
         """
         Called whenever the mouse moves.
         """
+        self.location = (x,y)
         if self.mouse_down:
             width = abs(self.zoom_box[0] - x)
             height = abs(self.zoom_box[1] - y)
