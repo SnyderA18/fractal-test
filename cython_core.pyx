@@ -104,7 +104,7 @@ def format_time(dt):
                 break
     return "%.*g %s" % (precision, dt / scale, unit)
 
-def _draw_fractal_queue_double(command_queue, unsigned int[:,:] buffer):
+def _draw_fractal_queue_double(command_queue, dirty_flag, unsigned int[:,:] buffer):
 
     cdef double ystep, xstep
     cdef unsigned int x,y
@@ -119,8 +119,7 @@ def _draw_fractal_queue_double(command_queue, unsigned int[:,:] buffer):
             return
 
         xmin, xmax, ymin, ymax, maxIter, xoffset, yoffset, width, height = message
-        ystep = (ymax - ymin) / (height - 1)
-        xstep = (xmax - xmin) / (width - 1)
+        # import time
         # starttime = time.time()
 
         ystep = (ymax - ymin) / (height - 1)
@@ -135,4 +134,5 @@ def _draw_fractal_queue_double(command_queue, unsigned int[:,:] buffer):
                 else:
                     color = ((i << 21) + (i << 10) + i*8)
                     buffer[y][x] = color
+            dirty_flag.set()
         # print("Calculation took", format_time(time.time() - starttime))

@@ -116,10 +116,11 @@ class MyGame(arcade.Window):
         self.threads = []
         self.command_queue = Queue()
         self.divs = 16
+        self.dirty_flag = threading.Event()
         threads = multiprocessing.cpu_count()
         threads = 1
         for i in range(threads):
-            t = threading.Thread(target=draw_fractal, args=(self.command_queue, self.data), daemon=True)
+            t = threading.Thread(target=draw_fractal, args=(self.command_queue, self.dirty_flag, self.data), daemon=True)
             t.start()
             self.threads.append(t)
         self.divide_drawing()
@@ -150,13 +151,10 @@ class MyGame(arcade.Window):
             center_x = x + (width / 2)
             center_y = y - (height / 2)
             arcade.draw_rectangle_outline(center_x, center_y, width, height, self.box_color)
-            if self.box_color is arcade.color.WHITE:
-                self.box_color = arcade.color.BLACK
-            else:
-                self.box_color = arcade.color.WHITE
         arcade.draw_rectangle_filled(SCREEN_WIDTH //2, 10, SCREEN_WIDTH, 20, arcade.color.AMAZON)
         x,y = self._screen_to_point(*self.location)
         arcade.draw_text("%0.4f, %0.4f" % (x,y),50, 5, arcade.color.BLACK)
+        arcade.draw_text("Q Depth: %d" % self.command_queue.qsize(), 250, 5, arcade.color.BLACK)
 
         
     def _point_to_screen(self, cx, cy):
@@ -170,9 +168,15 @@ class MyGame(arcade.Window):
         return cx, cy
 
     def update(self, delta_time):
-        self.texture = arcade.Texture('background', PIL.Image.fromarray(self.data, mode='RGBX'))
-        # Set the texture of the background sprite
-        self.background_sprite.texture = self.texture
+        if self.dirty_flag.is_set():
+            self.texture = arcade.Texture('background', PIL.Image.fromarray(self.data, mode='RGBX'))
+            # Set the texture of the background sprite
+            self.background_sprite.texture = self.texture
+            self.dirty_flag.clear()
+        if self.box_color is arcade.color.WHITE:
+            self.box_color = arcade.color.BLACK
+        else:
+            self.box_color = arcade.color.WHITE
 
     def on_close(self):
         # print("Got window close event")
@@ -278,6 +282,7 @@ class MyGame(arcade.Window):
             self.y = 0
             self._clear_image()
         print("after: (%0.4f,%0.4f)-(%0.4f,%0.4f)" % (self.xmin,self.ymin,self.xmax,self.ymax))
+
     def _clear_image(self, color = arcade.color.AMAZON):
         #self.data = 
         self.divide_drawing()
