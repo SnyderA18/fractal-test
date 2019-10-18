@@ -129,6 +129,7 @@ class MyGame(arcade.Window):
         self.mouse_down = False
         self.box_color = arcade.color.WHITE
         self.location = (0,0)
+        self.zooming_boxes = []
 
     def divide_drawing(self):
         div_per_axis = self.divs // 2
@@ -169,14 +170,25 @@ class MyGame(arcade.Window):
 
     def update(self, delta_time):
         if self.dirty_flag.is_set():
+            
             self.texture = arcade.Texture('background', PIL.Image.fromarray(self.data, mode='RGBX'))
             # Set the texture of the background sprite
             self.background_sprite.texture = self.texture
             self.dirty_flag.clear()
-        if self.box_color is arcade.color.WHITE:
-            self.box_color = arcade.color.BLACK
-        else:
-            self.box_color = arcade.color.WHITE
+        elif len(self.zooming_boxes) > 0:
+            cx1, cy1, cx2, cy2 = self.zooming_boxes[0] 
+            del self.zooming_boxes[0]
+            self.xmin = cx1
+            self.xmax = cx2
+            self.ymin = cy1
+            self.ymax = cy2
+            self.y = 0
+            self._clear_image()
+           #print ("zooming: (%0.4f,%0.4f)-(%0.4f,%0.4f)" % (self.xmin,self.ymin,self.xmax,self.ymax))
+        #if self.box_color is arcade.color.WHITE:
+            #self.box_color = arcade.color.BLACK
+        #else:
+            #self.box_color = arcade.color.WHITE
 
     def on_close(self):
         # print("Got window close event")
@@ -254,33 +266,48 @@ class MyGame(arcade.Window):
                 cur_width = self.xmax - self.xmin
                 cur_height = self.ymax - self.ymin
                 cx, cy = self._screen_to_point(x,y)
-                self.xmin = cx - cur_width
-                self.xmax = cx + cur_width
-                self.ymin = cy - cur_height
-                self.ymax = cy + cur_height
-                self.y = 0
-                self._clear_image()
-            else:
-                cur_width = self.xmax - self.xmin
-                cur_height = self.ymax - self.ymin
-                cx, cy = self._screen_to_point(x,y)
-                self.xmin = cx - cur_width / 4
-                self.xmax = cx + cur_width / 4
-                self.ymin = cy - cur_height / 4
-                self.ymax = cy + cur_height / 4
-                self.y = 0
-                self._clear_image()
-        else:
-            print(self.zoom_box)
-            x1 = min(self.zoom_box[0], self.zoom_box[0] + self.zoom_box[2])
-            y1 = min(SCREEN_HEIGHT - self.zoom_box[1], SCREEN_HEIGHT - self.zoom_box[1] + self.zoom_box[3])
-            x2 = max(self.zoom_box[0], self.zoom_box[0] + self.zoom_box[2])
-            y2 = max(SCREEN_HEIGHT - self.zoom_box[1], SCREEN_HEIGHT - self.zoom_box[1] + self.zoom_box[3])
-            print(x1,y1,x2,y2)
-            self.xmin, self.ymin = self._screen_to_point(x1,SCREEN_HEIGHT - y1)
-            self.xmax, self.ymax = self._screen_to_point(x2,SCREEN_HEIGHT - y2)
-            self.y = 0
-            self._clear_image()
+                #self.xmin = cx - cur_width
+                #self.xmax = cx + cur_width
+                #self.ymin = cy - cur_height
+                #self.ymax = cy + cur_height
+                #self.y = 0
+                #self._clear_image()
+                for i in range (1,11):
+                    #cur_width = self.xmax - self.xmin
+                    #cur_height = self.ymax - self.ymin
+                    #cx, cy = self._screen_to_point(x,y)
+                    cx1 = cx - cur_width * i
+                    cx2  = cx + cur_width * i
+                    cy1 = cy - cur_height * i
+                    cy2 = cy + cur_height * i
+                    #self.y = 0
+                    #self._clear_image()
+                    self.zooming_boxes.append((cx1, cx2, cy1, cy2))
+
+                else:
+                 
+                    cur_width = self.xmax - self.xmin
+                    cur_height = self.ymax - self.ymin
+                    cx, cy = self._screen_to_point(x,y)
+                    #self.xmin = cx - cur_width
+                    #self.xmax = cx + cur_width
+                    #self.ymin = cy - cur_height
+                    #self.ymax = cy + cur_height
+                    #self.y = 0
+                    #self._clear_image()
+                    for i in range (1,11):
+                        #cur_width = self.xmax - self.xmin
+                        #cur_height = self.ymax - self.ymin
+                        #cx, cy = self._screen_to_point(x,y)
+                        cx1 = cx - cur_width / (4* i)
+                        cx2  = cx + cur_width / (4* i)
+                        cy1 = cy - cur_height / (4* i)
+                        cy2 = cy + cur_height / (4 * i)
+                        #self.y = 0
+                        #self._clear_image()
+                        self.zooming_boxes.append((cx1, cy1, cx2, cy2))
+ 
+       
         print("after: (%0.4f,%0.4f)-(%0.4f,%0.4f)" % (self.xmin,self.ymin,self.xmax,self.ymax))
 
     def _clear_image(self, color = arcade.color.AMAZON):
